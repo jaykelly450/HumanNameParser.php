@@ -46,43 +46,51 @@ class HumanNameParser_Name {
 	  */
 	 public function chopWithRegex($regex, $submatchIndex = 0, $regexFlags = '')
 	 {
-		 $regex = $regex . "ui" . $regexFlags; // unicode + case-insensitive
-		 preg_match($regex, $this->str, $m);
-		 $subset = (isset($m[$submatchIndex])) ? $m[$submatchIndex] : '';
-
-		 if ($subset){
-			 $this->str = preg_replace($regex, ' ', $this->str, -1, $numReplacements);
-			 if ($numReplacements > 1){
-				 throw new Exception("The regex being used to find the name has multiple matches.");
-			 }
-			 $this->norm();
-			 return $subset;
-		 }
-		 else {
-			 return '';
-		 }
+	 	$t = $this;
+		$regex = $regex . "ui" . $regexFlags; // unicode + case-insensitive
+		preg_match($regex, $this->str, $m);
+		$subset = (isset($m[$submatchIndex])) ? $m[$submatchIndex] : '';
+		
+		if ($subset){
+			$this->str = preg_replace($regex, ' ', $this->str, -1, $numReplacements);
+			if ($numReplacements > 1){
+				throw new Exception("The regex being used to find the name has multiple matches.");
+			}
+			$this->norm();
+			return $subset;
+		} else {
+			return '';
+		}
 	 }
 	 
-	 /*
-	  * Flips the front and back parts of a name with one another.
-	  * Front and back are determined by a specified character somewhere in the
-	  * middle of the string.
-	  *
-	  * @param	String $flipAroundChar	the character(s) demarcating the two halves you want to flip.
-	  * @return Bool True on success.
-	  */
-	 public function flip($flipAroundChar)
-	 {
+	/**
+	 * @return boolean True if only one name component is left - i.e. no spaces or punctuation characters
+	 */
+	public function onlyOneComponentLeft()
+	{
+		$x = preg_match('#^\s*\w+\s*$#ui', $this->str);
+		return $x == 1;
+	}
+
+	/*
+	 * Flips the front and back parts of a name with one another.
+	 * Front and back are determined by a specified character somewhere in the
+	 * middle of the string.
+	 *
+	 * @param	String $flipAroundChar	the character(s) demarcating the two halves you want to flip.
+	 * @return Bool True on success.
+	 */
+	public function flip($flipAroundChar)
+	{
 		$substrings = preg_split("/$flipAroundChar/u", $this->str);
 		if (count($substrings) == 2){
 			$this->str = $substrings[1] . " " . $substrings[0];
 			$this->norm();
-		}
-		else if (count($substrings) > 2) {
+		} else if (count($substrings) > 2) {
 			throw new Exception("Can't flip around multiple '$flipAroundChar' characters in namestring.");
 		}
 		return true; // if there's 1 or 0 $flipAroundChar found
-	 }
+	}
 
 	/**
 	* Removes extra whitespace and punctuation from $this->str
@@ -96,7 +104,16 @@ class HumanNameParser_Name {
 		 $this->str = preg_replace( "#\s*$#u", "", $this->str );
 		 $this->str = preg_replace( "#\s+#u", " ", $this->str );
 		 $this->str = preg_replace( "#,$#u", " ", $this->str );
+		 $this->str = preg_replace( "#[^\s\.\(\)\,\-\w]#ui", '', $this->str);
 		 return true;
+	}
+	
+	/**
+	 * Remove the nickname components from this name - ()s etc
+	 */
+	public function removeNicknameComponents()
+	{
+		$this->str = preg_replace("#[\(\)]#u", '', $this->str);
 	}
 }
 ?>
